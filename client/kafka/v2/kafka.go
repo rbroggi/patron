@@ -18,9 +18,8 @@ const (
 	deliveryTypeSync  = "sync"
 	deliveryTypeAsync = "async"
 
-	deliveryStatusSent          deliveryStatus = "sent"
-	deliveryStatusCreationError deliveryStatus = "creation-errors"
-	deliveryStatusSendError     deliveryStatus = "send-errors"
+	deliveryStatusSent      deliveryStatus = "sent"
+	deliveryStatusSendError deliveryStatus = "send-errors"
 
 	componentTypeAsync = "kafka-async-producer"
 	componentTypeSync  = "kafka-sync-producer"
@@ -41,8 +40,8 @@ func init() {
 	prometheus.MustRegister(messageStatus)
 }
 
-func statusCountInc(deliveryType string, status deliveryStatus, topic string) {
-	messageStatus.WithLabelValues(string(status), topic, deliveryType).Inc()
+func statusCountAdd(deliveryType string, status deliveryStatus, topic string, cnt int) {
+	messageStatus.WithLabelValues(string(status), topic, deliveryType).Add(float64(cnt))
 }
 
 type baseProducer struct {
