@@ -1,0 +1,38 @@
+@startuml
+
+actor u as "user"
+
+node HttpSvc as "http service\n(http/main.go)"
+node HttpSecSvc as "http service\n(http-sec/main.go)"
+
+node kafkaSvc as "kafka consumer\n(kafka/main.go)"
+node amqpSvc as "amqp consumer\n(amqp/main.go)"
+node sqsSvc as "sqs consumer\n(sqs/main.go)"
+node grpcSvc as "grpc service\n(sqs/main.go)"
+
+rectangle "Kafka\n(docker-compose: kafka)" {
+    queue kafkaTopic as "patron-topic"
+}
+
+rectangle "RabbitMq\n(docker-compose: rabbitmq)" {
+    queue amqpQueue as "patron"
+}
+
+rectangle "SQS\n(docker-compose: localstack)" {
+    queue sqsQueue as "patron (queue)"
+    queue snsTopic as "patron-topic"
+}
+
+
+u <-> HttpSvc : JSON\nHTTP request
+HttpSvc <--> HttpSecSvc : protobuf payload \nautheticated\n HTTP request
+HttpSecSvc .> kafkaTopic : async push
+kafkaTopic ..> kafkaSvc : Consumes
+kafkaSvc ..> amqpQueue : Publishes
+amqpQueue .> amqpSvc : Consumes
+amqpSvc .> sqsQueue : Publishes
+amqpSvc ..> snsTopic : Publishes
+snsTopic ..> sqsQueue : Routes
+sqsQueue ..> sqsSvc: Consumes
+sqsSvc <-> grpcSvc : GRPC sync request
+@enduml

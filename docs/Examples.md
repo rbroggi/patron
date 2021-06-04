@@ -4,7 +4,15 @@ The [examples/](/examples) folder contains a number of small services which work
 
 ## Prerequisites
 
-Before all services start we should first start all dependencies with `docker-compose`.
+You will have to have the following dependencies installed in your system to be able to run this examples in your system:
+
+* [Docker](https://www.docker.com/)
+* [Docker compose](https://docs.docker.com/compose/install/)
+* [Golang](https://golang.org/)
+* [Bash shell](https://www.gnu.org/software/bash/)
+* [curl](https://curl.se/)
+
+Before all services start we should first start all dependencies (e.g. kafka, postgres, jaeger, rabbitmq, redis, etc...) with `docker-compose`. 
 
 ```shell
 docker-compose up -d
@@ -15,6 +23,14 @@ To tear down the above just:
 ```shell
 docker-compose down
 ```
+
+Next up, we will start several services that connect to each other as a chain using different communication
+stacks. All [patron services](Architecture.md#Service) start an HTTP exposing 'liveness', 'readyness', 'metrics' and 'debugging'
+endpoints, therefore, all the following 'microservices' use different ports in order to avoid collisions.
+Below you can find a simplified view of the communication between the services:
+
+[comment]: <> (image is the result of the plantuml diagram with the same name)
+![Flow of requests/events](images/example-arch.png)
 
 ## [HTTP Cache Service](../examples/http-cache/main.go) 
 
@@ -57,6 +73,13 @@ go run examples/http-sec/main.go
 
 ## [Kafka Service](../examples/kafka/main.go)
 
+---
+**NOTE**
+
+Use either this service or the [Legacy Kafka Service](../examples/kafka-legacy/main.go).
+They collide in the served port configuration and therefore cannot coexist.
+
+---
 The service shows how to use:
 
 - Kafka with a group consumer
@@ -70,6 +93,14 @@ go run examples/kafka/main.go
 ```
 
 ## [Legacy Kafka Service](../examples/kafka-legacy/main.go)
+
+---
+**NOTE**
+
+Use either this service or the [Kafka Service](../examples/kafka/main.go).
+They collide in the served port configuration and therefore cannot coexist.
+
+---
 
 The service shows how to use:
 
