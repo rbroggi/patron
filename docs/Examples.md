@@ -48,7 +48,8 @@ go run examples/http-cache/main.go
 ## [HTTP Service](../examples/http/main.go)
 
 The service shows how to use:
- 
+
+- File HTTP server
 - HTTP with CORS
 - HTTP client with API key
 - Textual logger with predefined fields

@@ -19,11 +19,19 @@ import (
 	"github.com/beatlabs/patron/log/std"
 )
 
+var assestsFoder string
+
 func init() {
 	err := os.Setenv("PATRON_JAEGER_SAMPLER_PARAM", "1.0")
 	if err != nil {
 		fmt.Printf("failed to set sampler env vars: %v", err)
 		os.Exit(1)
+	}
+	// allows to run from any folder the 'go run examples/http/main.go'
+	var ok bool
+	assestsFoder, ok = os.LookupEnv("PATRON_EXAMPLE_ASSETS_FOLDER")
+	if !ok {
+		assestsFoder = "examples/http/public"
 	}
 }
 
@@ -40,7 +48,7 @@ func main() {
 	}
 
 	routesBuilder := patronhttp.NewRoutesBuilder().
-		Append(patronhttp.NewFileServer("/frontend/*path", "examples/http/public", "examples/http/public/index.html")).
+		Append(patronhttp.NewFileServer("/frontend/*path", assestsFoder, assestsFoder+"/index.html")).
 		Append(patronhttp.NewPostRouteBuilder("/api", httpHandler)).
 		Append(patronhttp.NewGetRouteBuilder("/api", getHandler).WithRateLimiting(50, 50))
 
@@ -69,7 +77,7 @@ func main() {
 		log.Fatalf("failed to create and run service %v", err)
 	}
 }
-func getHandler(ctx context.Context, req *patronhttp.Request) (*patronhttp.Response, error) {
+func getHandler(_ context.Context, _ *patronhttp.Request) (*patronhttp.Response, error) {
 	return patronhttp.NewResponse(fmt.Sprint("Testing Middleware", http.StatusOK)), nil
 }
 
