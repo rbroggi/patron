@@ -114,7 +114,7 @@ func (ac *sqsComponent) Process(_ context.Context, btc patronsqs.Batch) {
 		logger := log.FromContext(msg.Context())
 		var u examples.User
 
-		err := json.DecodeRaw(msg.Body(), u)
+		err := json.DecodeRaw(msg.Body(), &u)
 		if err != nil {
 			logger.Errorf("failed to decode message: %v", err)
 			msg.NACK()

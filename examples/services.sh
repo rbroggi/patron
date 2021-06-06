@@ -1,21 +1,22 @@
 #!/bin/bash
 
+# directory of this script
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-# temp folders
+# temporary directories
 tmp_folder="${script_dir}"/tmp
 bin_folder="${tmp_folder}"/bin
 log_folder="${tmp_folder}"/log
 pid_file="${tmp_folder}"/pid.txt
 
 # assets folder (used only by http-svc)
-export PATRON_EXAMPLE_ASSETS_FOLDER=${script_dir}/http/public
+export PATRON_EXAMPLE_ASSETS_FOLDER="${script_dir}"/http/public
 
 # build the svc binary into convention folder
 function build_bin {
   local svc_name=$1
   local src_folder="${script_dir}/$2"
-  go build -o "${bin_folder}/${svc_name}" ${src_folder}/main.go
+  go build -o "${bin_folder}/${svc_name}" "${src_folder}"/main.go
 }
 
 # starts svc redirecting stdout/stderr to file and adding pid to file
@@ -25,7 +26,7 @@ function start_svc {
   echo "${!}|${svc_name}" >> "${pid_file}"
 }
 
-# clear currently running services relying on the pid file
+# kill currently running services relying on the pid file
 function stop_running_processes {
   if test -f "${pid_file}"; then
     while read -r line
@@ -49,22 +50,22 @@ elif [ "${action}" == "clean" ]; then
   stop_running_processes
   rm -fr ${tmp_folder}
   exit $?
-else
+elif [ "${action}" == "start" ]; then
   stop_running_processes
   # clean everything
   rm -fr "${bin_folder}"
   mkdir -p "${bin_folder}"
   mkdir -p "${log_folder}"
 
-  # HTTP cache service (http-cache-svc)
+  # http cache service (http-cache-svc)
   build_bin http-cache-svc http-cache
   start_svc http-cache-svc
 
-  # HTTP service (http-svc)
+  # http service (http-svc)
   build_bin http-svc http
   start_svc http-svc
 
-  # HTTP service (http-sec-svc)
+  # http service (http-sec-svc)
   build_bin http-sec-svc http-sec
   start_svc http-sec-svc
 
@@ -83,4 +84,6 @@ else
   # grpc service (http-grpc-svc)
   build_bin http-grpc-svc grpc
   start_svc http-grpc-svc
+else
+  echo "Usage: $0 [stop|clean|start]"
 fi
