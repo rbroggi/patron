@@ -19,7 +19,12 @@ import (
 	"github.com/beatlabs/patron/log/std"
 )
 
-var assestsFoder string
+// initialized with env variables in init block
+var (
+	assetsFolder string
+	cacheUri     string
+	httpSecUri   string
+)
 
 func init() {
 	err := os.Setenv("PATRON_JAEGER_SAMPLER_PARAM", "1.0")
@@ -27,16 +32,30 @@ func init() {
 		fmt.Printf("failed to set sampler env vars: %v", err)
 		os.Exit(1)
 	}
-	// allows to run from any folder the 'go run examples/http/main.go'
+	err = os.Setenv("PATRON_HTTP_DEFAULT_PORT", "50000")
+	if err != nil {
+		fmt.Printf("failed to set default patron port env vars: %v", err)
+		os.Exit(1)
+	}
+
+	// retrieve configs from environment
 	var ok bool
-	assestsFoder, ok = os.LookupEnv("PATRON_EXAMPLE_ASSETS_FOLDER")
+	assetsFolder, ok = os.LookupEnv("PATRON_EXAMPLE_ASSETS_FOLDER")
 	if !ok {
-		assestsFoder = "examples/http/public"
+		assetsFolder = "examples/http/public"
+	}
+	cacheUri, ok = os.LookupEnv("PATRON_EXAMPLE_CACHE_SVC_URI")
+	if !ok {
+		cacheUri = "http://localhost:50007/"
+	}
+	httpSecUri, ok = os.LookupEnv("PATRON_EXAMPLE_HTTP_SEC_SVC_URI")
+	if !ok {
+		cacheUri = "http://localhost:50001"
 	}
 }
 
 func main() {
-	name := "httpHandler"
+	name := "http-svc"
 	version := "1.0.0"
 
 	logger := std.New(os.Stderr, log.DebugLevel, map[string]interface{}{"env": "staging"})
@@ -48,7 +67,7 @@ func main() {
 	}
 
 	routesBuilder := patronhttp.NewRoutesBuilder().
-		Append(patronhttp.NewFileServer("/frontend/*path", assestsFoder, assestsFoder+"/index.html")).
+		Append(patronhttp.NewFileServer("/frontend/*path", assetsFolder, assetsFolder+"/index.html")).
 		Append(patronhttp.NewPostRouteBuilder("/api", httpHandler)).
 		Append(patronhttp.NewGetRouteBuilder("/api", getHandler).WithRateLimiting(50, 50))
 
@@ -102,7 +121,7 @@ func httpHandler(ctx context.Context, req *patronhttp.Request) (*patronhttp.Resp
 		return nil, fmt.Errorf("failed create request: %w", err)
 	}
 
-	httpRequest, err := http.NewRequest("GET", "http://localhost:50001", bytes.NewReader(b))
+	httpRequest, err := http.NewRequest("GET", httpSecUri, bytes.NewReader(b))
 	if err != nil {
 		return nil, fmt.Errorf("failed create request: %w", err)
 	}
@@ -123,7 +142,7 @@ func httpHandler(ctx context.Context, req *patronhttp.Request) (*patronhttp.Resp
 
 // DoIntervalRequest is a helper method to make a request to the http-cache example service from other examples
 func DoIntervalRequest(ctx context.Context) (string, error) {
-	request, err := http.NewRequest("GET", "http://localhost:50007/", nil)
+	request, err := http.NewRequest("GET", cacheUri, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed create route request: %w", err)
 	}

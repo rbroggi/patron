@@ -1,0 +1,214 @@
+version: '2.1'
+
+services:
+  #  external infrastructure dependencies
+  jaeger:
+    image: jaegertracing/all-in-one:1.20.0
+    environment:
+      - COLLECTOR_ZIPKIN_HTTP_PORT=9411
+    networks:
+      examplenw:
+        aliases:
+          - jaeger
+    expose:
+      - "9411"
+      - "16686"
+      - "5778"
+      - "14268"
+    ports:
+      - "0.0.0.0:9411:9411"
+      - "0.0.0.0:16686:16686"
+      - "0.0.0.0:5778:5778"
+      - "0.0.0.0:14268:14268"
+      - "0.0.0.0:5775:5775/udp"
+      - "0.0.0.0:6831:6831/udp"
+      - "0.0.0.0:6832:6832/udp"
+  prometheus:
+    image: prom/prometheus:v2.22.0
+    networks:
+      examplenw:
+        aliases:
+          - prometheus
+    volumes:
+      - ${PWD}/examples/config/prometheus.yml:/etc/prometheus/prometheus.yml
+    expose:
+      - "9090"
+    ports:
+      - "0.0.0.0:9090:9090"
+  rabbitmq:
+    image: rabbitmq:3-management
+    hostname: "rabbitmq"
+    networks:
+      examplenw:
+        aliases:
+          - rabbitmq
+    ports:
+      - "0.0.0.0:15672:15672"
+      - "0.0.0.0:5672:5672"
+  zookeeper:
+    image: confluentinc/cp-zookeeper:6.0.0
+    hostname: "zookeeper"
+    networks:
+      examplenw:
+        aliases:
+          - zookeeper
+    ports:
+      - "0.0.0.0:2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+  kafka:
+    image: confluentinc/cp-kafka:6.0.0
+    hostname: "kafka"
+    networks:
+      examplenw:
+        aliases:
+          - kafka
+    ports:
+      - "0.0.0.0:9092:9092"
+      - "0.0.0.0:29092:29092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  pg:
+    image:  postgres:13
+    hostname: "pg"
+    networks:
+      examplenw:
+        aliases:
+          - pg
+    ports:
+      - "0.0.0.0:5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=test123
+  localstack:
+    image: localstack/localstack:0.12.0
+    hostname: localstack
+    networks:
+      examplenw:
+        aliases:
+          - localstack
+    ports:
+      - "0.0.0.0:4566:4566"
+    environment:
+      - LOCALSTACK_SERVICES=sqs,sns
+      - LOCALSTACK_DEBUG=1
+      - LOCALSTACK_DATA_DIR=/tmp/localstack/data
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=eu-west-1
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+  redis:
+    image: bitnami/redis:6.0
+    hostname: 'redis'
+    environment:
+    - ALLOW_EMPTY_PASSWORD=yes
+    - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    networks:
+      examplenw:
+        aliases:
+          - cache
+    ports:
+      - "0.0.0.0:6379:6379"
+
+  #  internal services
+  http-svc:
+    build:
+      context: .
+      dockerfile:
+        ./examples/http/Dockerfile
+    depends_on:
+      - http-cache-svc
+      - http-sec-svc
+    environment:
+      - PATRON_EXAMPLE_ASSETS_FOLDER=/go/src/app/public
+      - PATRON_EXAMPLE_CACHE_SVC_URI=http://http-cache-svc:50007
+      - PATRON_EXAMPLE_HTTP_SEC_SVC_URI=http://http-sec-svc:50001
+    ports:
+      - "0.0.0.0:50000:50000"
+    expose:
+      - "50000"
+  http-cache-svc:
+    build:
+      context: .
+      dockerfile:
+        ./examples/http-cache/Dockerfile
+    depends_on:
+      - redis
+    ports:
+      - "0.0.0.0:50007:50007"
+  http-sec-svc:
+    build:
+      context: .
+      dockerfile:
+        ./examples/http-sec/Dockerfile
+    depends_on:
+      - kafka
+    environment:
+      - PATRON_EXAMPLE_KAFKA_BROKER=kafka:9092
+      - PATRON_EXAMPLE_KAFKA_TOPIC=patron-topic
+    ports:
+      - "0.0.0.0:50001:50001"
+  kafka-svc:
+    build:
+      context: .
+      dockerfile:
+        ./examples/kafka/Dockerfile
+    depends_on:
+      - kafka
+      - rabbitmq
+    environment:
+      - PATRON_EXAMPLE_AMQP_URL=amqp://guest:guest@rabbitmq:5672/
+      - PATRON_EXAMPLE_AMQP_EXCHANGE=patron
+      - PATRON_EXAMPLE_KAFKA_BROKER=kafka:9092
+      - PATRON_EXAMPLE_KAFKA_TOPIC=patron-topic
+      - PATRON_EXAMPLE_KAFKA_GROUP=patron-group
+    ports:
+      - "0.0.0.0:50002:50002"
+  amqp-svc:
+    build:
+      context: .
+      dockerfile:
+        ./examples/amqp/Dockerfile
+    depends_on:
+      - rabbitmq
+      - localstack
+    environment:
+      - PATRON_EXAMPLE_AMQP_URL=amqp://guest:guest@rabbitmq:5672/
+      - PATRON_EXAMPLE_AMQP_EXCHANGE_NAME=patron
+      - PATRON_EXAMPLE_AMQP_EXCHANGE_QUEUE=patron
+      - PATRON_EXAMPLE_SQS_ENDPOINT=http://localstack:4566
+      - PATRON_EXAMPLE_SQS_QUEUE=patron
+      - PATRON_EXAMPLE_SNS_ENDPOINT=http://localstack:4566
+      - PATRON_EXAMPLE_SNS_TOPIC=patron-topic
+    ports:
+      - "0.0.0.0:50003:50003"
+  sqs-svc:
+    build:
+      context: .
+      dockerfile:
+        ./examples/sqs/Dockerfile
+    depends_on:
+      - localstack
+      - grpc-svc
+    environment:
+      - PATRON_EXAMPLE_SQS_ENDPOINT=http://localstack:4566
+      - PATRON_EXAMPLE_SQS_QUEUE=patron
+    ports:
+      - "0.0.0.0:50004:50004"
+  grpc-svc:
+    build:
+      context: .
+      dockerfile:
+        ./examples/grpc/Dockerfile
+    ports:
+      - "0.0.0.0:50005:50005"
+#  client:
+networks:
+  examplenw: {}
+

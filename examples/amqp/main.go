@@ -25,10 +25,23 @@ import (
 	"github.com/streadway/amqp"
 )
 
+var (
+	// AMQP config (environment-driven)
+	amqpURL          string
+	amqpQueue        string
+	amqpExchangeName string
+
+	// SQS config (environment-driven)
+	awsSQSEndpoint = "http://localhost:4566"
+	awsSQSQueue    = "patron"
+
+	// SNS config (environment-driven)
+	awsSNSEndpoint = "http://localhost:4566"
+	awsSNSTopic    = "patron-topic"
+)
+
 const (
-	amqpURL          = "amqp://guest:guest@localhost:5672/"
-	amqpQueue        = "patron"
-	amqpExchangeName = "patron"
+	// AMQP static config
 	amqpExchangeType = amqp.ExchangeFanout
 
 	// Shared AWS config
@@ -36,14 +49,6 @@ const (
 	awsID     = "test"
 	awsSecret = "test"
 	awsToken  = "token"
-
-	// SQS config
-	awsSQSEndpoint = "http://localhost:4566"
-	awsSQSQueue    = "patron"
-
-	// SNS config
-	awsSNSEndpoint = "http://localhost:4566"
-	awsSNSTopic    = "patron-topic"
 )
 
 func init() {
@@ -61,6 +66,37 @@ func init() {
 	if err != nil {
 		fmt.Printf("failed to set default patron port env vars: %v", err)
 		os.Exit(1)
+	}
+
+	// retrieve config from environment
+	var ok bool
+	amqpURL, ok = os.LookupEnv("PATRON_EXAMPLE_AMQP_URL")
+	if !ok {
+		amqpURL = "amqp://guest:guest@localhost:5672/"
+	}
+	amqpExchangeName, ok = os.LookupEnv("PATRON_EXAMPLE_AMQP_EXCHANGE_NAME")
+	if !ok {
+		amqpExchangeName = "patron"
+	}
+	amqpExchangeName, ok = os.LookupEnv("PATRON_EXAMPLE_AMQP_EXCHANGE_QUEUE")
+	if !ok {
+		amqpExchangeName = "patron"
+	}
+	awsSQSEndpoint, ok = os.LookupEnv("PATRON_EXAMPLE_SQS_ENDPOINT")
+	if !ok {
+		awsSQSEndpoint = "http://localhost:4566"
+	}
+	awsSQSQueue, ok = os.LookupEnv("PATRON_EXAMPLE_SQS_QUEUE")
+	if !ok {
+		awsSQSQueue = "patron"
+	}
+	awsSNSEndpoint, ok = os.LookupEnv("PATRON_EXAMPLE_SNS_ENDPOINT")
+	if !ok {
+		awsSNSEndpoint = "http://localhost:4566"
+	}
+	awsSNSTopic, ok = os.LookupEnv("PATRON_EXAMPLE_SNS_TOPIC")
+	if !ok {
+		awsSNSTopic = "patron-topic"
 	}
 
 	// Setup queue and exchange if not already done.

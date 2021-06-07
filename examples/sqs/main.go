@@ -19,13 +19,16 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	awsSQSEndpoint string
+	awsSQSQueue    string
+)
+
 const (
-	awsRegion      = "eu-west-1"
-	awsID          = "test"
-	awsSecret      = "test"
-	awsToken       = "token"
-	awsSQSEndpoint = "http://localhost:4566"
-	awsSQSQueue    = "patron"
+	awsRegion = "eu-west-1"
+	awsID     = "test"
+	awsSecret = "test"
+	awsToken  = "token"
 )
 
 func init() {
@@ -44,6 +47,18 @@ func init() {
 		fmt.Printf("failed to set default patron port env vars: %v", err)
 		os.Exit(1)
 	}
+
+	// retrieve envi
+	var ok bool
+	awsSQSEndpoint, ok = os.LookupEnv("PATRON_EXAMPLE_SQS_ENDPOINT")
+	if !ok {
+		awsSQSEndpoint = "http://localhost:4566"
+	}
+	awsSQSQueue, ok = os.LookupEnv("PATRON_EXAMPLE_SQS_QUEUE")
+	if !ok {
+		awsSQSQueue = "patron"
+	}
+
 }
 
 func main() {

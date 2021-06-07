@@ -18,12 +18,13 @@ import (
 	"github.com/streadway/amqp"
 )
 
-const (
-	amqpURL      = "amqp://guest:guest@localhost:5672/"
-	amqpExchange = "patron"
-	kafkaTopic   = "patron-topic"
-	kafkaGroup   = "patron-group"
-	kafkaBroker  = "localhost:9092"
+// initialized with env variables in init block
+var (
+	amqpURL      string
+	amqpExchange string
+	kafkaTopic   string
+	kafkaBroker  string
+	kafkaGroup   string
 )
 
 func init() {
@@ -42,10 +43,33 @@ func init() {
 		fmt.Printf("failed to set default patron port env vars: %v", err)
 		os.Exit(1)
 	}
+
+	// retrieve config from environment
+	var ok bool
+	amqpURL, ok = os.LookupEnv("PATRON_EXAMPLE_AMQP_URL")
+	if !ok {
+		amqpURL = "amqp://guest:guest@localhost:5672/"
+	}
+	amqpExchange, ok = os.LookupEnv("PATRON_EXAMPLE_AMQP_EXCHANGE")
+	if !ok {
+		amqpExchange = "patron"
+	}
+	kafkaBroker, ok = os.LookupEnv("PATRON_EXAMPLE_KAFKA_BROKER")
+	if !ok {
+		kafkaBroker = "localhost:9092"
+	}
+	kafkaTopic, ok = os.LookupEnv("PATRON_EXAMPLE_KAFKA_TOPIC")
+	if !ok {
+		kafkaTopic = "patron-topic"
+	}
+	kafkaGroup, ok = os.LookupEnv("PATRON_EXAMPLE_KAFKA_GROUP")
+	if !ok {
+		kafkaGroup = "patron-group"
+	}
 }
 
 func main() {
-	name := "kafka"
+	name := "kafka-svc"
 	version := "1.0.0"
 
 	service, err := patron.New(name, version, patron.TextLogger())

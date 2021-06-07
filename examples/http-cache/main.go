@@ -32,7 +32,7 @@ func init() {
 }
 
 func main() {
-	name := "http-cache"
+	name := "http-cache-svc"
 	version := "1.0.0"
 
 	service, err := patron.New(name, version, patron.TextLogger())

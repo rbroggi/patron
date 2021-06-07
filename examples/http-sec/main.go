@@ -18,9 +18,10 @@ import (
 	"github.com/beatlabs/patron/log"
 )
 
-const (
-	kafkaTopic  = "patron-topic"
-	kafkaBroker = "localhost:9092"
+// initialized with env variables in init block
+var (
+	kafkaTopic  string
+	kafkaBroker string
 )
 
 func init() {
@@ -40,10 +41,22 @@ func init() {
 		fmt.Printf("failed to set default patron port env vars: %v", err)
 		os.Exit(1)
 	}
+
+	// retrieve configs from environment
+	var ok bool
+	kafkaBroker, ok = os.LookupEnv("PATRON_EXAMPLE_KAFKA_BROKER")
+	if !ok {
+		kafkaBroker = "localhost:9092"
+	}
+	kafkaTopic, ok = os.LookupEnv("PATRON_EXAMPLE_KAFKA_TOPIC")
+	if !ok {
+		kafkaTopic = "patron-topic"
+	}
+
 }
 
 func main() {
-	name := "http-sec"
+	name := "http-sec-svc"
 	version := "1.0.0"
 
 	service, err := patron.New(name, version, patron.LogFields(map[string]interface{}{"env": "staging"}))
