@@ -4,6 +4,6 @@ WORKDIR /go/src/app
 COPY . .
 
 RUN go build -o http-svc examples/http/main.go
-EXPOSE 5000
+EXPOSE 50000
 
 ENTRYPOINT [ "/go/src/app/http-svc" ]
