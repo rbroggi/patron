@@ -4,7 +4,7 @@ The [examples/](/examples) folder contains a number of small services which work
 
 ## Prerequisites
 
-You will have to have the following dependencies installed in your system to be able to run this examples in your system:
+To run these examples on your system, you need the following dependencies installed:
 
 * [Docker](https://www.docker.com/)
 * [Docker compose](https://docs.docker.com/compose/install/)
@@ -25,7 +25,7 @@ docker-compose down
 ```
 
 Next up, we will start several services that connect to each other as a chain using different communication
-stacks. All [patron services](Architecture.md#Service) start an HTTP exposing 'liveness', 'readyness', 'metrics' and 'debugging'
+stacks. All [patron services](Architecture.md#Service) start an HTTP component exposing 'liveness', 'readiness', 'metrics' and 'debugging'
 endpoints, therefore, all the following 'microservices' use different ports in order to avoid collisions.
 Below you can find a simplified view of the communication between the services:
 
