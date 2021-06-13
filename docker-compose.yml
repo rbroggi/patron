@@ -16,13 +16,13 @@ services:
       - "5778"
       - "14268"
     ports:
-      - "0.0.0.0:9411:9411"
-      - "0.0.0.0:16686:16686"
-      - "0.0.0.0:5778:5778"
-      - "0.0.0.0:14268:14268"
-      - "0.0.0.0:5775:5775/udp"
-      - "0.0.0.0:6831:6831/udp"
-      - "0.0.0.0:6832:6832/udp"
+      - "9411:9411"
+      - "16686:16686"
+      - "5778:5778"
+      - "14268:14268"
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
   prometheus:
     image: prom/prometheus:v2.22.0
     networks:
@@ -34,7 +34,7 @@ services:
     expose:
       - "9090"
     ports:
-      - "0.0.0.0:9090:9090"
+      - "9090:9090"
   rabbitmq:
     image: rabbitmq:3-management
     hostname: "rabbitmq"
@@ -43,8 +43,8 @@ services:
         aliases:
           - rabbitmq
     ports:
-      - "0.0.0.0:15672:15672"
-      - "0.0.0.0:5672:5672"
+      - "15672:15672"
+      - "5672:5672"
   zookeeper:
     image: confluentinc/cp-zookeeper:6.0.0
     hostname: "zookeeper"
@@ -53,7 +53,7 @@ services:
         aliases:
           - zookeeper
     ports:
-      - "0.0.0.0:2181:2181"
+      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -65,8 +65,8 @@ services:
         aliases:
           - kafka
     ports:
-      - "0.0.0.0:9092:9092"
-      - "0.0.0.0:29092:29092"
+      - "9092:9092"
+      - "29092:29092"
     depends_on:
       - zookeeper
     environment:
@@ -82,7 +82,7 @@ services:
         aliases:
           - pg
     ports:
-      - "0.0.0.0:5432:5432"
+      - "5432:5432"
     environment:
       - POSTGRES_PASSWORD=test123
   localstack:
@@ -93,7 +93,7 @@ services:
         aliases:
           - localstack
     ports:
-      - "0.0.0.0:4566:4566"
+      - "4566:4566"
     environment:
       - LOCALSTACK_SERVICES=sqs,sns
       - LOCALSTACK_DEBUG=1
@@ -114,9 +114,17 @@ services:
         aliases:
           - cache
     ports:
-      - "0.0.0.0:6379:6379"
+      - "6379:6379"
 
   #  internal services
+  client:
+    build:
+      context: .
+      dockerfile:
+        ./examples/client/Dockerfile
+    depends_on:
+      - http-svc
+
   http-svc:
     build:
       context: .
@@ -130,7 +138,7 @@ services:
       - PATRON_EXAMPLE_CACHE_SVC_URI=http://http-cache-svc:50007
       - PATRON_EXAMPLE_HTTP_SEC_SVC_URI=http://http-sec-svc:50001
     ports:
-      - "0.0.0.0:50000:50000"
+      - "50000:50000"
     expose:
       - "50000"
   http-cache-svc:
@@ -141,7 +149,7 @@ services:
     depends_on:
       - redis
     ports:
-      - "0.0.0.0:50007:50007"
+      - "50007:50007"
   http-sec-svc:
     build:
       context: .
@@ -153,7 +161,7 @@ services:
       - PATRON_EXAMPLE_KAFKA_BROKER=kafka:9092
       - PATRON_EXAMPLE_KAFKA_TOPIC=patron-topic
     ports:
-      - "0.0.0.0:50001:50001"
+      - "50001:50001"
   kafka-svc:
     build:
       context: .
@@ -169,7 +177,7 @@ services:
       - PATRON_EXAMPLE_KAFKA_TOPIC=patron-topic
       - PATRON_EXAMPLE_KAFKA_GROUP=patron-group
     ports:
-      - "0.0.0.0:50002:50002"
+      - "50002:50002"
   amqp-svc:
     build:
       context: .
@@ -187,7 +195,7 @@ services:
       - PATRON_EXAMPLE_SNS_ENDPOINT=http://localstack:4566
       - PATRON_EXAMPLE_SNS_TOPIC=patron-topic
     ports:
-      - "0.0.0.0:50003:50003"
+      - "50003:50003"
   sqs-svc:
     build:
       context: .
@@ -200,14 +208,14 @@ services:
       - PATRON_EXAMPLE_SQS_ENDPOINT=http://localstack:4566
       - PATRON_EXAMPLE_SQS_QUEUE=patron
     ports:
-      - "0.0.0.0:50004:50004"
+      - "50004:50004"
   grpc-svc:
     build:
       context: .
       dockerfile:
         ./examples/grpc/Dockerfile
     ports:
-      - "0.0.0.0:50005:50005"
+      - "50005:50005"
 #  client:
 networks:
   examplenw: {}
