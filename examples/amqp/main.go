@@ -78,9 +78,9 @@ func init() {
 	if !ok {
 		amqpExchangeName = "patron"
 	}
-	amqpExchangeName, ok = os.LookupEnv("PATRON_EXAMPLE_AMQP_EXCHANGE_QUEUE")
+	amqpQueue, ok = os.LookupEnv("PATRON_EXAMPLE_AMQP_EXCHANGE_QUEUE")
 	if !ok {
-		amqpExchangeName = "patron"
+		amqpQueue = "patron"
 	}
 	awsSQSEndpoint, ok = os.LookupEnv("PATRON_EXAMPLE_SQS_ENDPOINT")
 	if !ok {

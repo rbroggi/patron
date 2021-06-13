@@ -50,7 +50,7 @@ func init() {
 	}
 	httpSecUri, ok = os.LookupEnv("PATRON_EXAMPLE_HTTP_SEC_SVC_URI")
 	if !ok {
-		cacheUri = "http://localhost:50001"
+		httpSecUri = "http://localhost:50001"
 	}
 }
 
