@@ -39,9 +39,12 @@ modsync: fmtcheck
 examples:
 	$(MAKE) -C examples
 
+gosec:
+	$(DOCKER) run --rm -it -w /patron/ -v $(CURDIR):/patron securego/gosec -no-fail /patron/...
+
 # disallow any parallelism (-j) for Make. This is necessary since some
 # commands during the build process create temporary files that collide
 # under parallel conditions.
 .NOTPARALLEL:
 
-.PHONY: default test testint cover coverci fmt fmtcheck lint deeplint ci modsync
+.PHONY: default test testint cover coverci fmt fmtcheck lint deeplint ci modsync gosec
