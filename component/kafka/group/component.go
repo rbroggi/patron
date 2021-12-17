@@ -167,6 +167,7 @@ type Component struct {
 	batchTimeout time.Duration
 	retries      uint
 	retryWait    time.Duration
+	topicChecker func(ctx context.Context, c *Component) error
 	commitSync   bool
 }
 
@@ -174,6 +175,11 @@ type Component struct {
 func (c *Component) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	if c.topicChecker != nil {
+		if err := c.topicChecker(ctx, c); err != nil {
+			return err
+		}
+	}
 	return c.processing(ctx)
 }
 

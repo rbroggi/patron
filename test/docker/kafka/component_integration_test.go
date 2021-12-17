@@ -39,7 +39,15 @@ func TestKafkaComponent_Success(t *testing.T) {
 		}
 		return nil
 	}
-	component := newComponent(t, successTopic2, 3, 10, processorFunc)
+	component := newComponent(
+		t,
+		successTopic2,
+		fmt.Sprintf("%s:%s", kafkaHost, kafkaPort),
+		3,
+		10,
+		processorFunc,
+		true,
+	)
 
 	// Run Patron with the kafka component
 	patronContext, patronCancel := context.WithCancel(context.Background())
@@ -110,7 +118,15 @@ func TestKafkaComponent_FailAllRetries(t *testing.T) {
 
 	numOfRetries := uint(3)
 	batchSize := uint(1)
-	component := newComponent(t, failAllRetriesTopic2, numOfRetries, batchSize, processorFunc)
+	component := newComponent(
+		t,
+		failAllRetriesTopic2,
+		fmt.Sprintf("%s:%s", kafkaHost, kafkaPort),
+		numOfRetries,
+		batchSize,
+		processorFunc,
+		true,
+	)
 
 	// Send messages to the kafka topic
 	var producerWG sync.WaitGroup
@@ -166,7 +182,15 @@ func TestKafkaComponent_FailOnceAndRetry(t *testing.T) {
 		}
 		return nil
 	}
-	component := newComponent(t, failAndRetryTopic2, 3, 1, processorFunc)
+	component := newComponent(
+		t,
+		failAndRetryTopic2,
+		fmt.Sprintf("%s:%s", kafkaHost, kafkaPort),
+		3,
+		1,
+		processorFunc,
+		true,
+	)
 
 	// Send messages to the kafka topic
 	var producerWG sync.WaitGroup
@@ -209,13 +233,89 @@ func TestKafkaComponent_FailOnceAndRetry(t *testing.T) {
 	assert.Equal(t, expectedMessages, actualMessages)
 }
 
-func newComponent(t *testing.T, name string, retries uint, batchSize uint, processorFunc kafka.BatchProcessorFunc) *group.Component {
+func TestGroupConsume_CheckTopicDoesNotFailEvenWhenTopicExistsIfSaramaConfigAllowAutoTopicCreation(t *testing.T) {
+	// Test parameters
+	processorFunc := func(batch kafka.Batch) error {
+		return nil
+	}
+	invalidTopicName := "invalid-topic-name"
+	component := newComponent(
+		t,
+		invalidTopicName,
+		fmt.Sprintf("%s:%s", kafkaHost, kafkaPort),
+		3,
+		10,
+		processorFunc,
+		true,
+	)
+
+	patronContext, patronCancel := context.WithCancel(context.Background())
+	var patronWG sync.WaitGroup
+	patronWG.Add(1)
+	go func() {
+		svc, err := patron.New(successTopic3, "0", patron.LogFields(map[string]interface{}{"test": invalidTopicName}))
+		require.NoError(t, err)
+		err = svc.WithComponents(component).Run(patronContext)
+		require.NoError(t, err)
+		patronWG.Done()
+	}()
+	patronCancel()
+	patronWG.Wait()
+}
+
+func TestGroupConsume_CheckTopicFailsDueToNonExistingTopic(t *testing.T) {
+	// Test parameters
+	processorFunc := func(batch kafka.Batch) error {
+		return nil
+	}
+	invalidTopicName := "invalid-topic-name"
+	component := newComponent(
+		t,
+		invalidTopicName,
+		fmt.Sprintf("%s:%s", kafkaHost, kafkaPort),
+		3,
+		10,
+		processorFunc,
+		false,
+	)
+	svc, err := patron.New(successTopic3, "0", patron.LogFields(map[string]interface{}{"test": invalidTopicName}))
+	require.NoError(t, err)
+	patronContext, patronCancel := context.WithCancel(context.Background())
+	defer patronCancel()
+	err = svc.WithComponents(component).Run(patronContext)
+	require.EqualError(t, err, "topic invalid-topic-name does not exist in broker\n")
+}
+
+func TestGroupConsume_CheckTopicFailsDueToNonExistingBroker(t *testing.T) {
+	// Test parameters
+	processorFunc := func(batch kafka.Batch) error {
+		return nil
+	}
+	component := newComponent(
+		t,
+		successTopic3,
+		fmt.Sprintf("%s:%s", kafkaHost, wrongKafkaPort),
+		3,
+		10,
+		processorFunc,
+		false,
+	)
+	svc, err := patron.New(successTopic3, "0", patron.LogFields(map[string]interface{}{"test": successTopic3}))
+	require.NoError(t, err)
+	patronContext, patronCancel := context.WithCancel(context.Background())
+	defer patronCancel()
+	err = svc.WithComponents(component).Run(patronContext)
+	// not checking exact string because it comes from the sarama kafka client
+	require.NotNil(t, err)
+}
+
+func newComponent(t *testing.T, name string, broker string, retries uint, batchSize uint, processorFunc kafka.BatchProcessorFunc, allowTopicCreation bool) *group.Component {
 	saramaCfg, err := kafka.DefaultConsumerSaramaConfig(name, true)
 	saramaCfg.Consumer.Offsets.Initial = sarama.OffsetOldest
 	saramaCfg.Version = sarama.V2_6_0_0
+	saramaCfg.Metadata.AllowAutoTopicCreation = allowTopicCreation
 	require.NoError(t, err)
 
-	broker := fmt.Sprintf("%s:%s", kafkaHost, kafkaPort)
 	cmp, err := group.New(
 		name,
 		name+"-group",
@@ -228,7 +328,8 @@ func newComponent(t *testing.T, name string, retries uint, batchSize uint, proce
 		group.BatchTimeout(100*time.Millisecond),
 		group.Retries(retries),
 		group.RetryWait(200*time.Millisecond),
-		group.CommitSync())
+		group.CommitSync(),
+		group.CheckTopic())
 	require.NoError(t, err)
 
 	return cmp

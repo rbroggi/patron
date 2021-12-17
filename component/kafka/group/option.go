@@ -1,9 +1,12 @@
 package group
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"time"
 
+	"github.com/Shopify/sarama"
 	"github.com/beatlabs/patron/component/kafka"
 	"github.com/beatlabs/patron/log"
 )
@@ -22,6 +25,52 @@ func FailureStrategy(fs kafka.FailStrategy) OptionFunc {
 			return errors.New("invalid failure strategy provided")
 		}
 		c.failStrategy = fs
+		return nil
+	}
+}
+
+// CheckTopic will attempt to:
+//	1. connect to the broker,
+//  2. retrieve the existing topics in the broker
+//  3. if auto-topic creation is disabled, check whether the configured topics exist in the broker
+// If any of the checks above fail the component will exit before starting to consume messages
+func CheckTopic() OptionFunc {
+	return func(c *Component) error {
+		c.topicChecker = func(ctx context.Context, c *Component) error {
+			client, err := sarama.NewClient(c.brokers, c.saramaConfig)
+			defer func() {
+				if client != nil {
+					_ = client.Close()
+				}
+			}()
+			// without client no connection can be established
+			if err != nil {
+				return err
+			}
+			// check if the topic exists
+			brokerTopics, err := client.Topics()
+			if err != nil {
+				return err
+			}
+
+			// if auto-topic creation is not enabled then check if the topic exists
+			if !c.saramaConfig.Metadata.AllowAutoTopicCreation {
+				for _, topic := range c.topics {
+					topicExists := false
+					for _, brokerTopic := range brokerTopics {
+						if topic == brokerTopic {
+							topicExists = true
+							break
+						}
+					}
+					if !topicExists {
+						return fmt.Errorf("topic %s does not exist in broker", topic)
+					}
+				}
+			}
+
+			return nil
+		}
 		return nil
 	}
 }
