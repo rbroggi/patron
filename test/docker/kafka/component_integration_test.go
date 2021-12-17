@@ -233,7 +233,7 @@ func TestKafkaComponent_FailOnceAndRetry(t *testing.T) {
 	assert.Equal(t, expectedMessages, actualMessages)
 }
 
-func TestGroupConsume_CheckTopicDoesNotFailEvenWhenTopicExistsIfSaramaConfigAllowAutoTopicCreation(t *testing.T) {
+func TestGroupConsume_CheckTopicDoesNotFailEvenWhenTopicDoesNotExistIfSaramaConfigAllowAutoTopicCreation(t *testing.T) {
 	// Test parameters
 	processorFunc := func(batch kafka.Batch) error {
 		return nil
