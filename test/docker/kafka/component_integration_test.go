@@ -243,7 +243,7 @@ func TestGroupConsume_CheckTopicDoesNotFailEvenWhenTopicDoesNotExistIfSaramaConf
 		t,
 		invalidTopicName,
 		fmt.Sprintf("%s:%s", kafkaHost, kafkaPort),
-		3,
+		5,
 		10,
 		processorFunc,
 		true,
