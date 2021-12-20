@@ -240,6 +240,7 @@ func TestGroupConsume_CheckTopicFailsDueToNonExistingBroker(t *testing.T) {
 		sarama.NewConfig(),
 		group.CheckTopic())
 	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "failed to create client:")
 }
 
 func newComponent(t *testing.T, name string, retries uint, batchSize uint, processorFunc kafka.BatchProcessorFunc) *group.Component {
@@ -261,7 +262,8 @@ func newComponent(t *testing.T, name string, retries uint, batchSize uint, proce
 		group.BatchTimeout(100*time.Millisecond),
 		group.Retries(retries),
 		group.RetryWait(200*time.Millisecond),
-		group.CommitSync())
+		group.CommitSync(),
+		group.CheckTopic())
 	require.NoError(t, err)
 
 	return cmp

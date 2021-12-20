@@ -38,12 +38,12 @@ func CheckTopic() OptionFunc {
 		saramaConf := sarama.NewConfig()
 		client, err := sarama.NewClient(c.brokers, saramaConf)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create client: %w", err)
 		}
-		defer client.Close()
+		defer func() { _ = client.Close() }()
 		brokerTopics, err := client.Topics()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get topics from broker: %w", err)
 		}
 
 		topicsSet := make(map[string]struct{}, len(brokerTopics))
