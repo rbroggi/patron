@@ -29,7 +29,7 @@ func FailureStrategy(fs kafka.FailStrategy) OptionFunc {
 }
 
 // CheckTopic will attempt to:
-//	1. connect to the broker
+//  1. connect to the broker
 //  2. retrieve the existing topics in the broker
 //  3. check whether the configured topics exist in the broker
 // If any of the checks above fail the component will exit before starting to consume messages
