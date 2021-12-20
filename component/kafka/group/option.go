@@ -31,28 +31,21 @@ func FailureStrategy(fs kafka.FailStrategy) OptionFunc {
 // CheckTopic will attempt to:
 //	1. connect to the broker
 //  2. retrieve the existing topics in the broker
-//  3. if auto-topic creation is disabled, check whether the configured topics exist in the broker
+//  3. check whether the configured topics exist in the broker
 // If any of the checks above fail the component will exit before starting to consume messages
 func CheckTopic() OptionFunc {
 	return func(c *Component) error {
-		c.topicChecker = checkTopic
-		return nil
-	}
-}
+		saramaConf := sarama.NewConfig()
+		client, err := sarama.NewClient(c.brokers, saramaConf)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		brokerTopics, err := client.Topics()
+		if err != nil {
+			return err
+		}
 
-func checkTopic(c *Component) error {
-	client, err := sarama.NewClient(c.brokers, c.saramaConfig)
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-	brokerTopics, err := client.Topics()
-	if err != nil {
-		return err
-	}
-
-	// if auto-topic creation is not enabled then check if the topic exists
-	if !c.saramaConfig.Metadata.AllowAutoTopicCreation {
 		topicsSet := make(map[string]struct{}, len(brokerTopics))
 		for _, topic := range brokerTopics {
 			topicsSet[topic] = struct{}{}
@@ -63,9 +56,8 @@ func checkTopic(c *Component) error {
 				return fmt.Errorf("topic %s does not exist in broker", topic)
 			}
 		}
+		return nil
 	}
-
-	return nil
 }
 
 // Retries sets the number of time a component should retry in case of an error.
