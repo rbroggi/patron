@@ -28,7 +28,7 @@ func FailureStrategy(fs kafka.FailStrategy) OptionFunc {
 	}
 }
 
-// CheckTopic checks whether the component-configured topics exist in the broker
+// CheckTopic checks whether the component-configured topics exist in the broker.
 func CheckTopic() OptionFunc {
 	return func(c *Component) error {
 		saramaConf := sarama.NewConfig()
